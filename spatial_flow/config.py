@@ -465,7 +465,7 @@ class compare(keras.layers.Layer):
 
     header_shape : a 1d int shape telling the dimensions of the spatial block
     spatial_shape  :   a 1d int tensor telling the dimensions of the spatial block.
-    comparison_shape: a shape telling information about the comparison blokc
+    comparison_shape: a shape telling information about the comparison block
     tail_shape : a 1d int shape telling the dimensions of the tail block.
     compare_shape: a tensorshape. 
 
