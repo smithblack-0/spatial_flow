@@ -83,13 +83,15 @@ class spatial_config(keras.layers.Layer):
     def __init__(self,
                     header_shape,       
                     spatial_shape,                    
-                    tail_shape = None,
+                    tail_shape,
+                    comparison_shape,
                     name = None,
                     ):
         super().__init__(name)
-        self.header_shape = header_shape
-        self.spatial_shape = spatial_shape
-        self.tail_shape = tail_shape
+        self._header_shape = self.__verify(header_shape, "header")
+        self._spatial_shape = self.__verify(spatial_shape, "spatial")
+        self._tail_shape = self.__verify(tail_shape, "tail")
+        self._comparison_shape = self.__verify(comparison_shape, "comparison")
 
 
     #Define settable properties
@@ -103,6 +105,11 @@ class spatial_config(keras.layers.Layer):
     @property
     def tail_shape(self):
         return self._tail_shape
+    @property
+    def comparison_shape(self):
+        return self._comparison_shape
+
+
     @header_shape.setter
     def header_shape(self, value):
 
@@ -134,6 +141,11 @@ class spatial_config(keras.layers.Layer):
             #Commit
 
             self._tail_shape = value
+    @comparison_shape.setter
+    def comparison_shape(self, value):
+        value = self.__verify(value, "comparison")
+        self._comparison_Shape = value
+
     #define object properties
     @property
     def standard_config(self):
@@ -151,8 +163,6 @@ class spatial_config(keras.layers.Layer):
 
         """ Perform verification """
         tf.debugging.assert_rank(value, 1, message = "%s rank was not 1" % name)
-        if(len(value) != 0):
-            tf.debugging.assert_integer(value, "%s rank was not integer, was %s" % (name, value))
         return value
 
 

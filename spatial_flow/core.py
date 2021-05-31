@@ -8,6 +8,8 @@ import spatial_flow.utils.functions as functions
 
 spatial_register = keras.utils.register_keras_serializable("spatial_flow/core")
 
+def Input(batch_dims, spatial_dims, tail_dims):
+
 
 
 
@@ -55,7 +57,6 @@ def indexed_broadcast(input, shape, indices):
     #perform broadcast and return result
     output = tf.broadcast_to(output, shape)
     return output
-
 
 
 
@@ -180,7 +181,6 @@ def unpack_reference(config, reference,  callback, shape=None, level="comparison
 
     return repacked
 
-
 def unpacker(tensor, threshold, callback, shape):
     """
     Unpacker is responsible for recursively
@@ -209,6 +209,6 @@ def unpacker(tensor, threshold, callback, shape):
 
     output_shape = tensor.shape[1:-threshold].concatenate(shape)
     unpack_action = lambda input : unpacker(input, threshold, callback, shape)
-    output = tf.map_fn(unpack_action, tensor, fn_output_signature=tf.TensorSpec(output_shape))
+    output = tf.map_fn(unpack_action, tensor, fn_output_signature=tf.TensorSpec(output_shape, tensor.dtype))
     return output
 
