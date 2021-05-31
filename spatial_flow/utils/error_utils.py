@@ -175,3 +175,13 @@ class Selection_Error(Exception):
         msg = "Selection Error: " + msg
         super().__init__(msg)
         self.prb = arg
+
+class Unit_Error(Exception):
+    def __init__(self, msg):
+        msg = "Unit Error: " + msg
+        super().__init__(msg)
+
+class Reducer_Error(Exception):
+    def __init__(self, msg):
+        msg = "Reducer Error: " + msg
+        super().__init__(msg)

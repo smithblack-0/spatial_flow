@@ -1,7 +1,6 @@
 import tensorflow as tf
 import tensorflow.keras as keras
 
-import spatial_flow.config
 from spatial_flow.reference import Reference
 from spatial_flow.utils.error_utils import Selection_Error
 import spatial_flow.core as core
@@ -61,6 +60,12 @@ class Selector(keras.layers.Layer):
     @property
     def index_shape(self):
         return self._index_shape
+    @property
+    def batch_dims(self):
+        return self._batch_dims
+    @property
+    def channel_dims(self):
+        return self._channel_dims
     def __init__(self, reference, name="selector", mode="simple"):
         """
 
@@ -94,6 +99,10 @@ class Selector(keras.layers.Layer):
         self._spatial_shape = reference.spatial_shape
         self._comparison_shape = reference.comparison_shape
         self._index_shape = reference.index_shape
+
+        self._batch_dims = None
+        self._channel_dims = None
+
         #hack save to work transparently
 
             #impliment
@@ -156,7 +165,7 @@ class Selector(keras.layers.Layer):
             update_func = lambda unpacked, spatial_index : self.modify(unpacked, spatial_index, args, kwargs)
             self.reference.update(update_func)
 
-    def call(self, spatialgrid):
+    def call(self, spatial_state):
         """
 
         Perform the extraction and produce a tensor in comparison format.
@@ -164,16 +173,24 @@ class Selector(keras.layers.Layer):
         Compiles with tensorflow.
 
 
-        :param spatialgrid: A tensor in spatialgrid format
+        :param spatial_state: A tensor in spatialgrid format
         :return: A tensor in comparison format
         """
-        
+
+        #store batch (nonspatial) dimensions.
+
+        if self._batch_dims is None:
+            self._batch_dims = spatial_state.batch_dims
+        if self._channel_dims is None:
+            self._channel_dims = spatial_state.channel_dims
 
 
+        #define callback function
         def callback(comparison_grid):
-            gather = tf.gather_nd(spatialgrid, comparison_grid)
+            gather = tf.gather_nd(spatial_state, comparison_grid, len(self._batch_dims)+len(self._channel_dims))
             return gather
 
+        #perform callback
         shape = self.reference.comparison_shape
         output = self.reference.unpack(callback, shape)
         return output

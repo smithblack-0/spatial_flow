@@ -1,17 +1,11 @@
 import tensorflow as tf
 import tensorflow.keras as keras
-from spatial_flow.config import spatial_config
 import spatial_flow.utils.error_utils as error
 import spatial_flow.utils.functions as functions
 
 #setup registration function for keras serializer
 
 spatial_register = keras.utils.register_keras_serializable("spatial_flow/core")
-
-def Input(batch_dims, spatial_dims, tail_dims):
-
-
-
 
    
 def indexed_broadcast(input, shape, indices):

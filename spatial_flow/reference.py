@@ -2,7 +2,6 @@ import tensorflow as tf
 import tensorflow.keras as keras
 import spatial_flow.utils.error_utils as error
 import spatial_flow.core as core
-from spatial_flow.config import spatial_config
 
 """
 

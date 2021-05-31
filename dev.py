@@ -4,10 +4,13 @@ import tensorflow.keras as keras
 import spatial_flow
 
 test = tf.random.normal([5])
-
+test2 = tf.keras.layers.Dense(1)
+print("callable %s " % callable(test2))
+print(test2)
+print(vars(test2))
 basic_reference = spatial_flow.reference.Reference([5], [2])
 print(basic_reference.reference)
-selector = spatial_flow.selection.Selector(basic_reference)
+selector = spatial_flow.selectors.Selector(basic_reference)
 
 input = tf.keras.Input(type_spec=tf.TensorSpec([5]))
 output = selector(input)
