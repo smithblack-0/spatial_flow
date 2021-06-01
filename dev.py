@@ -3,10 +3,9 @@ import tensorflow.keras as keras
 # import numpy as np
 import spatial_flow
 
-test = tf.random.normal([4, 5])
-test2 = tf.keras.layers.Dense(1)
-test3 = tf.keras.layers.Dense(3)
-
+test = tf.random.normal([4, 3, 5])
+test2 = tf.random.normal([5,10,1])
+print(tf.tensordot(test,test2, [[2], [0]]))
 
 basic_reference = spatial_flow.reference.Reference([5], [2])
 selector = spatial_flow.selectors.Selector(basic_reference)

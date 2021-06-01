@@ -106,11 +106,14 @@ class Dense(ND_Layer):
         bias_core = tf.stack(bias_core, axis=0)
         kernel_shape = tf.TensorShape(kernel_core).concatenate(tf.TensorShape(self._units))
         bias_shape = tf.TensorShape(bias_core).concatenate(tf.TensorShape(self._units))
-        #Add batch parameters
 
-        for item in range(0, input_shape.rank - self._reduction_dims.shape[0]):
-            kernel_shape = tf.TensorShape([1]).concatenate(kernel_shape)
-            bias_shape = tf.TensorShape([1]).concatenate(bias_shape)
+        #Add extra dimensions as needed
+
+        while input_shape.rank > kernel_shape.rank:
+            kernel_shape = kernel_shape.concatenate([1])
+
+
+        #build variables
 
         self._kernel = self.add_weight(name = "kernel", shape = kernel_shape, initializer=self._kernel_initializer,
                         regularizer=self._kernel_regularizer, constraint=self._kernel_constraint)
@@ -119,27 +122,21 @@ class Dense(ND_Layer):
                                          regularizer=self._bias_regularizer, constraint=self._bias_constraint)
     def tensordot(self, input):
 
-        #add dimensions where required\
-        expanded_input = input
-        for item in range(self._units.rank):
-            #add units dimensions
-            expanded_input = tf.expand_dims(input, axis=-1)
-        input_broadcast =tf.broadcast_to(expanded_input, input.shape.concatenate(self._units))
+        #add dimensions as required
 
-        #perform broadcast of kernel to input, allowing batch shape and
-        #parameter sharing to be taken into account.
+        while input.shape.rank < self._kernel.shape.rank:
+            input = tf.expand_dims(input, axis=0)
 
-        kernel_broadcast = tf.broadcast_to(self._kernel, input_broadcast.shape)
+        #identify indices
 
-        #calculate tensordot indices.
+        input_indices = tf.cast(tf.where(self._reduction_dims), tf.dtypes.int32)
+        kernel_indices = tf.cast(tf.range(0, self._sharing.shape.rank), tf.dtypes.int32)
+        #take tensordot
 
-        start_point = input_broadcast.shape.rank - self._units.rank - self._reduction_dims.shape.rank
-        indices = tf.boolean_mask(tf.add(start_point, tf.range(0, self._reduction_dims.shape[0])), self._reduction_dims)
-
-        #perform tensordot.
-
-        return tf.tensordot(input_broadcast, kernel_broadcast, axes=[indices, indices])
+        return tf.tensordot(input, self._kernel, axes=[input_indices, kernel_indices])
     def call(self, input):
-        return tf.add(self.tensordot(input),self._bias)
+
+        multiply = self.tensordot(input)
+        return tf.add(multiply,self._bias)
 
 
