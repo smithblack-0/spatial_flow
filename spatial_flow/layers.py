@@ -90,51 +90,41 @@ class Dense(ND_Layer):
 
     def build(self, input_shape):
 
-        ##Go ahead and build the variable arrays at the heart of all of this
+        ##Go ahead and build the kernel and bias cores
 
+        data_start = input_shape.rank - self._reduction_dims.shape.rank
         kernel_core = []
+        bias_core = []
         sharing_stack = tf.unstack(self._sharing, axis=0)
         for index in range(self._reduction_dims.shape.rank):
             if self._reduction_dims[index] and not sharing_stack.pop(0):
-                kernel_core.append(input_shape[index])
+                kernel_core.append(input_shape[index + data_start])
             else:
                 kernel_core.append(1)
+                bias_core.append(input_shape[index])
         kernel_core = tf.stack(kernel_core, axis=0)
+        bias_core = tf.stack(bias_core, axis=0)
         kernel_shape = tf.TensorShape(kernel_core).concatenate(tf.TensorShape(self._units))
-
+        bias_shape = tf.TensorShape(bias_core).concatenate(tf.TensorShape(self._units))
         #Add batch parameters
 
         for item in range(0, input_shape.rank - self._reduction_dims.shape[0]):
             kernel_shape = tf.TensorShape([1]).concatenate(kernel_shape)
-
+            bias_shape = tf.TensorShape([1]).concatenate(bias_shape)
 
         self._kernel = self.add_weight(name = "kernel", shape = kernel_shape, initializer=self._kernel_initializer,
                         regularizer=self._kernel_regularizer, constraint=self._kernel_constraint)
         if self._use_bias:
-            logical_mask = tf.logical_not(self._reduction_dims)
-            for item in range(0,input_shape.rank - self._reduction_dims.shape[0]):
-                log
-
-
-
-            bias_core = tf.boolean_mask(input_shape, tf.logical_not(self._reduction_dims))
-            bias_shape = tf.TensorShape(bias_core).concatenate(tf.TensorShape(self._units))
-
-            for item in range(0, ):
-                bias_shape = tf.TensorShape([1]).concatenate(bias_shape)
-
             self._bias = self.add_weight(name="bias", shape=bias_shape, initializer=self._bias_initializer,
                                          regularizer=self._bias_regularizer, constraint=self._bias_constraint)
-    @tf.function
     def tensordot(self, input):
 
-        #add dimensions where required
-        for item in range(self._units.shape[0]):
+        #add dimensions where required\
+        expanded_input = input
+        for item in range(self._units.rank):
             #add units dimensions
-            input = tf.expand_dims(input, axis=-1)
-
-        #perform broadcast of input to units, providing room for output
-        input_broadcast =tf.broadcast_to(input, self._units.shape)
+            expanded_input = tf.expand_dims(input, axis=-1)
+        input_broadcast =tf.broadcast_to(expanded_input, input.shape.concatenate(self._units))
 
         #perform broadcast of kernel to input, allowing batch shape and
         #parameter sharing to be taken into account.

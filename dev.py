@@ -1,6 +1,3 @@
-June 24th.
-Then 28th on unitl second of July.
-
 import tensorflow as tf
 import tensorflow.keras as keras
 # import numpy as np
