@@ -13,7 +13,9 @@ place
 
 """
 
+spatial_register = keras.utils.register_keras_serializable("spatial_flow/reduction")
 
+@spatial_register
 class Reducer(keras.layers.Layer):
     """ 
     
@@ -21,11 +23,9 @@ class Reducer(keras.layers.Layer):
     method designed to be overridden called "reduce"
 
     reducer should be initialized with a single
-    selector, and which it will be forever after
-    be tied to.
+    selector, after which it will forever be tied to it.
 
-    As in most cases, Reducer comes with a method to be overridden.
-    In it's case, it is the appropriately named "reduce"
+
     """
     @property
     def batch_dims(self):
@@ -36,41 +36,25 @@ class Reducer(keras.layers.Layer):
     @property
     def selector(self):
         return self._selector
-    def __init__(self, selector, reduce_dims = "all" , sharing=False, name="reducer"):
+    def __init__(self, selector, reduce_dims = "all", name="reducer"):
         """
-        The initialization method.
 
+        The initializer for the reducer class.
 
-        :param selector: the selector which will be reduced
-        :param sharing: A tensor telling the sharing behavior
-            Parameter sharing is quite viable
-            in a reducer environment, and a powerful technique
-            as well.
-
-            For this implimentation, it simply means the keras
-            layers will be reused along the specified axis.
-
-            As such, one can provide True to enable parameter
-            sharing along all dimensions, or a 1D bool tensor
-            of the appropriate length to enable parameter sharing
-            along each dimension.
-
+        :param selector: A valid selector
+        :param reduce_dims: The dimensions to be reduced. Supports "All" or a 1D bool list
+        :param name: The name of the layer.
         """
 
         #verify inputs are sane
-        super().__init__(name=name)
-
         if not isinstance(selector, Selector):
-            raise Reducer_Error("Init: Expected selector, got type %s" % type(selector))
-        tf.debugging.assert_type(sharing, tf.dtypes.bool, "Reducer error: sharing not bool")
-        tf.debugging.assert_rank_in(sharing, (0,1), "Reducer error: sharing: ")
+            return Reducer_Error("Input 'selector' was not a selector")
 
-        sharing = tf.constant(sharing)
-        if sharing.shape.rank == 0:
-            sharing = tf.fill([selector.comparison_shape.rank], sharing)
-        else:
-            tf.debugging.assert_shapes([(sharing, [selector.comparison_shape.rank])])
-        #save values
+
+        #Initialize and store
+        super().__init__(name=name, **kwargs)
+
+
 
         self._selector = selector
 
@@ -80,20 +64,96 @@ class Reducer(keras.layers.Layer):
         self._batch_dims = None
         self._channel_dims = None
 
-        #Go wrap call to strip
+        #Go wrap call to strip batch and channel dims off
 
 
-    def call(self, input):
-        #if not yet set, go set batch and channel dims
+        self.__stored_call = self.__call__
+        def stripper(self, input):
 
-        if self._batch_dims is None:
-            self._batch_dims = input.batch_dims
-        if self._channel_dims is None:
+            self._total_batch_dims = input.batch_dims
             self._channel_dims = input.channel_dims
+            self.__call__ = self.__stored_call
+            self.__call__(input)
+        self.__call__ = stripper
+
+@spatial_register
+class dense_reducer(Reducer):
+    """
+
+    The dense reducer performs the reduction along the targetted dimensions in one
+    massive tensordot. It supports parameter sharing as in convolutions per dimension,
+    and can be loaded with many of the keras goodies such as kernel and bias initializers.
+
+    """
+
+    def __init__(self,
+                 selector,
+                 reduction_dims="all",
+                 sharing=None,
+                 activation=None,
+                 use_bias=True,
+                 kernel_initializer = "glorot_uniform",
+                 bias_initializer = None,
+                 kernel_regularizer = None,
+                 bias_regularizer = None,
+                 activitY_regularizer = None,
+                 kernel_constraint = None,
+                 bias_constraint =None,
+                 **kwargs):
+        """
+
+
+        :param reduction_dims: a list of bools, matching the remaining comparison space, or "all" to reduce everything
+            parameter defines which dimensions should be reduced, and which should not.
+        :param sharing: A 1D bool list, or None. If not None, must match length of call input, and defines which
+            dimensions to share parameters on; True means share, False means don't. Defaults to false.
+        :param activation: Like keras Dense
+        :param use_bias: Like keras Dense
+        :param kernel_initializer: Like keras Dense
+        :param bias_initializer: Like keras Dense
+        :param kernel_regularizer: Like keras Dense
+        :param bias_regularizer: Like keras Dense
+        :param activitY_regularizer: Like keras Dense
+        :param kernel_constraint: Like keras Dense
+        :param bias_constraint: Like keras Dense
+        :param kwargs:
+        """
+        #Initialize
+        super().__init__(selector, kwargs)
+
+        #Begin storing dimensions items.
+
+        if reduction_dims is not None:
+            self._reduction_dims = tf.constant(reduction_dims, dtype=tf.dtypes.bool)
+        else:
+            self._reduction_dims = None
+
+        if sharing is not None:
+            self._sharing = tf.constant(sharing, dtype = tf.dtypes.bool)
+
+        #store keras functions
+
+        self._use_bias = use_bias
+        self._activation = keras.activations.get(activation)
+        self._kernel_initializer = keras.initializers.get(kernel_initializer)
+        self._bias_initializer = keras.initializers.get(bias_initializer)
+        self._kernel_regularizer = keras.regularizers.get(kernel_regularizer)
+        self._bias_regularizer = keras.regularizers.get(bias_regularizer)
+        self._activity_regularizer = keras.regularizers.get(activitY_regularizer)
+        self._kernel_constraint = keras.constraints.get(kernel_constraint)
+        self._bias_constraint = keras.constraints.get(bias_constraint)
+
+    def build(self, input_shape):
+
+        #perform verification and extrapolation
+
+        tf.debugging.assert_rank_at_least(input_shape, self.batch_dims.rank)
 
 
 
-spatial_register = keras.utils.register_keras_serializable("spatial_flow/reduction")
+        #construct kernel
+
+        kernel_shape = tf.where(self._sharing, )
 
 
 @spatial_register
@@ -189,5 +249,3 @@ class keras_reducer(Reducer):
 
         return default(batch_dims, channel_dims, comparison_shape)
 
-
-    def __init__(self):

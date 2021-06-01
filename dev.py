@@ -3,9 +3,14 @@ import tensorflow.keras as keras
 # import numpy as np
 import spatial_flow
 
-test = tf.random.normal([5])
+#test = tf.random.normal([1, 5])
 test2 = tf.keras.layers.Dense(1)
-print("callable %s " % callable(test2))
+test3 = tf.keras.layers.Dense(3)
+
+test = tf.keras.Input(5)
+output = test2(test)
+output = test3(test)
+print("callable %s " % output)
 print(test2)
 print(vars(test2))
 basic_reference = spatial_flow.reference.Reference([5], [2])
