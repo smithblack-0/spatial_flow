@@ -1,5 +1,6 @@
 import tensorflow as tf
 import tensorflow.keras as keras
+import spatial_flow.core as core
 
 class ND_Layer(keras.layers.Layer):
     """"
@@ -34,10 +35,9 @@ class Dense(ND_Layer):
     """
 
     def __init__(self,
-                 total_batch_dims : int,
                  units,
-                 reduction_dims = "all",
-                 sharing=None,
+                 reduction_dims,
+                 sharing,
                  activation=None,
                  use_bias=True,
                  kernel_initializer = "glorot_uniform",
@@ -52,8 +52,10 @@ class Dense(ND_Layer):
 
 
         :param units: What shape the tensor output should be
-        :param sharing: A 1D bool list, or None. If not None, must match length of call input, and defines which
-            dimensions to share parameters on; True means share, False means don't. Defaults to false.
+        :param sharing: A 1D bool list the length of reduction dimensions,
+         and defines which dimensions to share parameters on;True means share, False means don't.
+        :param reduction_dims: A 1D bool list the length of the expected input rank.
+                    Which dimensions of the input will actually be reduced. True means reduce. False ignore.
         :param activation: Like keras Dense
         :param use_bias: Like keras Dense
         :param kernel_initializer: Like keras Dense
@@ -87,34 +89,67 @@ class Dense(ND_Layer):
         self._bias_constraint = keras.constraints.get(bias_constraint)
 
     def build(self, input_shape):
-        #perform basic verification
 
+        ##Go ahead and build the variable arrays at the heart of all of this
 
-
-        if self._reduction_dims is "all":
-            self._reduction_dims = tf.fill([input_shape.rank], True)
-
-
-        self._output_shape = tf.TensorShape(tf.where(self._units is None, input_shape, self._units))
-
-
-        ##Go ahead and build the variable arrays at the heart of this
-
-        kernel_core = tf.where(self._sharing, 1, input_shape)
-        kernel_core = tf.where(self._reduction_dims, kernel_core, 1)
+        kernel_core = []
+        sharing_stack = tf.unstack(self._sharing, axis=0)
+        for index in range(self._reduction_dims.shape.rank):
+            if self._reduction_dims[index] and not sharing_stack.pop(0):
+                kernel_core.append(input_shape[index])
+            else:
+                kernel_core.append(1)
+        kernel_core = tf.stack(kernel_core, axis=0)
         kernel_shape = tf.TensorShape(kernel_core).concatenate(tf.TensorShape(self._units))
+
+        #Add batch parameters
+
+        for item in range(0, input_shape.rank - self._reduction_dims.shape[0]):
+            kernel_shape = tf.TensorShape([1]).concatenate(kernel_shape)
+
+
         self._kernel = self.add_weight(name = "kernel", shape = kernel_shape, initializer=self._kernel_initializer,
                         regularizer=self._kernel_regularizer, constraint=self._kernel_constraint)
         if self._use_bias:
+            logical_mask = tf.logical_not(self._reduction_dims)
+            for item in range(0,input_shape.rank - self._reduction_dims.shape[0]):
+                log
+
+
+
             bias_core = tf.boolean_mask(input_shape, tf.logical_not(self._reduction_dims))
             bias_shape = tf.TensorShape(bias_core).concatenate(tf.TensorShape(self._units))
+
+            for item in range(0, ):
+                bias_shape = tf.TensorShape([1]).concatenate(bias_shape)
+
             self._bias = self.add_weight(name="bias", shape=bias_shape, initializer=self._bias_initializer,
                                          regularizer=self._bias_regularizer, constraint=self._bias_constraint)
     @tf.function
     def tensordot(self, input):
-        input_broadcast = tf.broadcast_to(input, self._kernel.shape)
+
+        #add dimensions where required
+        for item in range(self._units.shape[0]):
+            #add units dimensions
+            input = tf.expand_dims(input, axis=-1)
+
+        #perform broadcast of input to units, providing room for output
+        input_broadcast =tf.broadcast_to(input, self._units.shape)
+
+        #perform broadcast of kernel to input, allowing batch shape and
+        #parameter sharing to be taken into account.
+
         kernel_broadcast = tf.broadcast_to(self._kernel, input_broadcast.shape)
-        return tf.tensordot(input_broadcast, kernel_broadcast, axes=[])
+
+        #calculate tensordot indices.
+
+        start_point = input_broadcast.shape.rank - self._units.rank - self._reduction_dims.shape.rank
+        indices = tf.boolean_mask(tf.add(start_point, tf.range(0, self._reduction_dims.shape[0])), self._reduction_dims)
+
+        #perform tensordot.
+
+        return tf.tensordot(input_broadcast, kernel_broadcast, axes=[indices, indices])
     def call(self, input):
+        return tf.add(self.tensordot(input),self._bias)
 
 

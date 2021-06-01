@@ -1,26 +1,27 @@
+June 24th.
+Then 28th on unitl second of July.
+
 import tensorflow as tf
 import tensorflow.keras as keras
 # import numpy as np
 import spatial_flow
 
-#test = tf.random.normal([1, 5])
+test = tf.random.normal([4, 5])
 test2 = tf.keras.layers.Dense(1)
 test3 = tf.keras.layers.Dense(3)
 
-test = tf.keras.Input(5)
-output = test2(test)
-output = test3(test)
-print("callable %s " % output)
-print(test2)
-print(vars(test2))
+
 basic_reference = spatial_flow.reference.Reference([5], [2])
-print(basic_reference.reference)
 selector = spatial_flow.selectors.Selector(basic_reference)
 
-input = tf.keras.Input(type_spec=tf.TensorSpec([5]))
-output = selector(input)
-model = tf.keras.Model(input, output)
-model.compile(loss=tf.keras.losses.mean_squared_error)
+novel_dense_test = spatial_flow.layers.Dense([10], [True], [False])
+print(novel_dense_test(test))
+
+
+#input = tf.keras.Input(type_spec=tf.TensorSpec([5]))
+#output = selector(input)
+#model = tf.keras.Model(input, output)
+#model.compile(loss=tf.keras.losses.mean_squared_error)
 # config = tensorflowND.spatial_config([2], [2,3], [4, 5])
 # instance = tf.random.normal([2,2,3,4,5])
 # #instance = tf.constant([0,1], dtype = float)
