@@ -3,14 +3,14 @@ import tensorflow.keras as keras
 # import numpy as np
 import spatial_flow
 
-test = tf.random.normal([4, 3, 5])
+test = tf.random.normal([4, 5, 3, 4])
 test2 = tf.random.normal([5,10,1])
-print(tf.tensordot(test,test2, [[2], [0]]))
 
+print(tf.tensordot(test, test2, [[1], [0]]))
 basic_reference = spatial_flow.reference.Reference([5], [2])
 selector = spatial_flow.selectors.Selector(basic_reference)
 
-novel_dense_test = spatial_flow.layers.Dense([10], [True], [False])
+novel_dense_test = spatial_flow.layers.Dense([10], reduction_dims=[True, False, True], sharing=[False, False, False])
 print(novel_dense_test(test))
 
 

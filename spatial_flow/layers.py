@@ -41,10 +41,10 @@ class Dense(ND_Layer):
                  activation=None,
                  use_bias=True,
                  kernel_initializer = "glorot_uniform",
-                 bias_initializer = None,
+                 bias_initializer = "zeros",
                  kernel_regularizer = None,
                  bias_regularizer = None,
-                 activitY_regularizer = None,
+                 activity_regularizer = None,
                  kernel_constraint = None,
                  bias_constraint =None,
                  **kwargs):
@@ -84,20 +84,23 @@ class Dense(ND_Layer):
         self._bias_initializer = keras.initializers.get(bias_initializer)
         self._kernel_regularizer = keras.regularizers.get(kernel_regularizer)
         self._bias_regularizer = keras.regularizers.get(bias_regularizer)
-        self._activity_regularizer = keras.regularizers.get(activitY_regularizer)
+        self._activity_regularizer = keras.regularizers.get(activity_regularizer)
         self._kernel_constraint = keras.constraints.get(kernel_constraint)
         self._bias_constraint = keras.constraints.get(bias_constraint)
 
+        #store defaults
+
+        self._kernel_excess = 0
+        self._input_excess = 0
     def build(self, input_shape):
 
         ##Go ahead and build the kernel and bias cores
 
-        data_start = input_shape.rank - self._reduction_dims.shape.rank
+        data_start = input_shape.rank - self._reduction_dims.shape[0]
         kernel_core = []
         bias_core = []
-        sharing_stack = tf.unstack(self._sharing, axis=0)
-        for index in range(self._reduction_dims.shape.rank):
-            if self._reduction_dims[index] and not sharing_stack.pop(0):
+        for index in range(self._reduction_dims.shape[0]):
+            if self._reduction_dims[index] and not self._sharing[index]:
                 kernel_core.append(input_shape[index + data_start])
             else:
                 kernel_core.append(1)
@@ -111,7 +114,10 @@ class Dense(ND_Layer):
 
         while input_shape.rank > kernel_shape.rank:
             kernel_shape = kernel_shape.concatenate([1])
-
+            self._kernel_excess += 1
+        while input_shape.rank < kernel_shape.rank:
+            input_shape = input_shape.concatenate([1])
+            self._input_excess += 1
 
         #build variables
 
@@ -123,20 +129,36 @@ class Dense(ND_Layer):
     def tensordot(self, input):
 
         #add dimensions as required
-
-        while input.shape.rank < self._kernel.shape.rank:
-            input = tf.expand_dims(input, axis=0)
+        expand = input
+        while expand.shape.rank < self._kernel.shape.rank:
+            expand = tf.expand_dims(input, axis=0)
 
         #identify indices
 
-        input_indices = tf.cast(tf.where(self._reduction_dims), tf.dtypes.int32)
-        kernel_indices = tf.cast(tf.range(0, self._sharing.shape.rank), tf.dtypes.int32)
+        primary_indices = tf.where(self._reduction_dims)
+        primary_indices = tf.cast(tf.reduce_sum(primary_indices, axis=-1), tf.dtypes.int32)
+        kernel_indices = primary_indices
+        input_indices = tf.range(0, input.shape.rank)
+        input_indices = tf.reverse(input_indices, axis=[0])
+        input_indices = tf.gather(input_indices,primary_indices, axis=0)
+        input_indices = tf.reverse(input_indices, axis=[0])
+
+
         #take tensordot
 
-        return tf.tensordot(input, self._kernel, axes=[input_indices, kernel_indices])
+        return tf.tensordot(expand, self._kernel, axes=[input_indices, kernel_indices])
     def call(self, input):
 
-        multiply = self.tensordot(input)
-        return tf.add(multiply,self._bias)
+        #perform tensordot
+        output = self.tensordot(input)
+        #strip excess dimensions
+        for item in range(self._kernel_excess):
+            output = tf.reduce_sum(output, axis=-1)
+        for item in range(self._input_excess):
+            output = tf.reduce_sum(output, axis=0)
+        #add bias
+        output = tf.add(output,self._bias)
+        #return
+        return output
 
 
