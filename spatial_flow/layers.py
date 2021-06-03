@@ -92,6 +92,7 @@ class Dense(ND_Layer):
 
         self._kernel_excess = 0
         self._input_excess = 0
+
     def build(self, input_shape):
 
         ##Go ahead and build the kernel and bias cores
@@ -99,26 +100,35 @@ class Dense(ND_Layer):
         data_start = input_shape.rank - self._reduction_dims.shape[0]
         kernel_core = []
         bias_core = []
+        broadcast_shape = []
         for index in range(self._reduction_dims.shape[0]):
-            if self._reduction_dims[index] and not self._sharing[index]:
-                kernel_core.append(input_shape[index + data_start])
+            if self._reduction_dims[index]:
+                if not self._sharing[index]:
+                    kernel_core.append(input_shape[index + data_start])
+                else:
+                    kernel_core.append(1)
+                broadcast_shape.append(input_shape[index+data_start])
             else:
-                kernel_core.append(1)
-                bias_core.append(input_shape[index])
+                bias_core.append(input_shape[index + data_start])
+
         kernel_core = tf.stack(kernel_core, axis=0)
         bias_core = tf.stack(bias_core, axis=0)
+        broadcast_core = tf.stack(broadcast_shape, axis=0)
+
         kernel_shape = tf.TensorShape(kernel_core).concatenate(tf.TensorShape(self._units))
         bias_shape = tf.TensorShape(bias_core).concatenate(tf.TensorShape(self._units))
-
+        broadcast_shape = tf.TensorShape(broadcast_core).concatenate(self._units)
         #Add extra dimensions as needed
 
         while input_shape.rank > kernel_shape.rank:
             kernel_shape = kernel_shape.concatenate([1])
+            broadcast_shape = broadcast_shape.concatenate([1])
             self._kernel_excess += 1
         while input_shape.rank < kernel_shape.rank:
             input_shape = input_shape.concatenate([1])
             self._input_excess += 1
 
+        self._broadcast_shape = broadcast_shape
         #build variables
 
         self._kernel = self.add_weight(name = "kernel", shape = kernel_shape, initializer=self._kernel_initializer,
@@ -126,6 +136,23 @@ class Dense(ND_Layer):
         if self._use_bias:
             self._bias = self.add_weight(name="bias", shape=bias_shape, initializer=self._bias_initializer,
                                          regularizer=self._bias_regularizer, constraint=self._bias_constraint)
+
+        #identify tensordot indices
+
+
+
+        primary_indices = tf.where(self._reduction_dims)
+        primary_indices = tf.cast(tf.reduce_sum(primary_indices, axis=-1), tf.dtypes.int32)
+        kernel_indices = tf.range(0, primary_indices.shape[0])
+        input_indices = tf.range(0, input_shape.rank)
+        input_indices = tf.reverse(input_indices, axis=[0])
+        input_indices = tf.gather(input_indices,primary_indices, axis=0)
+        input_indices = tf.reverse(input_indices, axis=[0])
+
+        self._kernel_indices = kernel_indices
+        self._input_indices = input_indices
+
+    @tf.function
     def tensordot(self, input):
 
         #add dimensions as required
@@ -135,18 +162,15 @@ class Dense(ND_Layer):
 
         #identify indices
 
-        primary_indices = tf.where(self._reduction_dims)
-        primary_indices = tf.cast(tf.reduce_sum(primary_indices, axis=-1), tf.dtypes.int32)
-        kernel_indices = primary_indices
-        input_indices = tf.range(0, input.shape.rank)
-        input_indices = tf.reverse(input_indices, axis=[0])
-        input_indices = tf.gather(input_indices,primary_indices, axis=0)
-        input_indices = tf.reverse(input_indices, axis=[0])
+        kernel_indices = self._kernel_indices
+        input_indices = self._input_indices
+        #broadcast kernel for paramter sharing
 
+        kernel = tf.broadcast_to(self._kernel, self._broadcast_shape)
 
         #take tensordot
 
-        return tf.tensordot(expand, self._kernel, axes=[input_indices, kernel_indices])
+        return tf.tensordot(expand, kernel, axes=[input_indices, kernel_indices])
     def call(self, input):
 
         #perform tensordot
