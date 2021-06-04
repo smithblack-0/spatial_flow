@@ -22,6 +22,8 @@ class Reducer(keras.layers.Layer):
     The base class for reducers, Reducer possesses the important
     method designed to be overridden called "reduce"
 
+
+
     reducer should be initialized with a single
     selector, after which it will forever be tied to it.
 
