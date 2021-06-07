@@ -1,6 +1,6 @@
 import tensorflow as tf
 import tensorflow.keras as keras
-import spatial_flow.core as core
+import genome_flow.core as core
 
 class ND_Layer(keras.layers.Layer):
     """"

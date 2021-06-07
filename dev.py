@@ -1,18 +1,15 @@
 import tensorflow as tf
 import tensorflow.keras as keras
 # import numpy as np
-import spatial_flow
 
-test = tf.random.normal([4, 5, 3, 4])
-test2 = tf.random.normal([5,10,1])
+test1 = tf.keras.layers.Dense(2)
+test2 = tf.keras.layers.Dense(2)
+test = test2(test1(tf.constant([[1,2,3]])))
 
-basic_reference = spatial_flow.reference.Reference([5], [2])
-selector = spatial_flow.selectors.Selector(basic_reference)
-
-novel_dense_test = spatial_flow.layers.Dense([10], reduction_dims=[True, False, True], sharing=[True, False, False])
-print(novel_dense_test(test).shape)
-
-
+print(dir(test2))
+print(test2.weights)
+print(test2.variables)
+print(test2.get_config())
 #input = tf.keras.Input(type_spec=tf.TensorSpec([5]))
 #output = selector(input)
 #model = tf.keras.Model(input, output)

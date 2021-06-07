@@ -1,39 +1,21 @@
 import tensorflow as tf
 import tensorflow.keras as keras
-import spatial_flow.utils.error_utils as error
-import spatial_flow.core as core
+import genome_flow.utils.error_utils as error
+import genome_flow.core as core
 
 """
 
-This section pertains to references and reference based functions
-
-
-References are spatial blocks with spatial_length + 1 additional dimensions which are, in effect, 
-sparse pointers to particular neurons in a standard spatial block. They are used for
-initialization only, and are accepted by some sort of selector, with the most common being static. 
-
-Their exact morphology is as follows. After the tail dimension, there is one additional dimension
-whose length is equal to the number of spatial dimensions. This indexes the various mesh states.
-
-Past this, there are spatial_length additional dimensions, with each additional dimension 
-being capable of holding any number of pointers for that particular dimension.
-
-References are extremely flexible, which is why the architecture is used. Of particular notice,
-references naturally allow spatial flow to dynamically rearrange its architecture at the drop of the hat.
-
-
-
-references are build using the reference language architecture 
-
+This section pertains to references
 
 
 
 
 """
+class
 
 
 
-class Reference:
+class Old_Reference:
     """
 
     A reference is, in essence, a series of pointers located on
@@ -187,6 +169,14 @@ class Reference:
         return output
 
     def __init__(self, spatial_shape, comparison_shape):
+        """
+        The initialization method.
+
+
+
+        :param spatial_shape:
+        :param comparison_shape:
+        """
 
         self._spatial_shape = tf.TensorShape(self.__verify(spatial_shape, "spatial_shape"))
         self._comparison_shape = tf.TensorShape(self.__verify(comparison_shape, "comparison_shape"))

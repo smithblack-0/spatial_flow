@@ -1,7 +1,7 @@
 import tensorflow as tf
 import tensorflow.keras as keras
-from spatial_flow.utils.error_utils import Reducer_Error
-from spatial_flow.selectors import Selector
+from genome_flow.utils.error_utils import Reducer_Error
+from genome_flow.selectors import Selector
 """
 
 A reducer is an object which accepts a 
@@ -13,20 +13,23 @@ place
 
 """
 
-spatial_register = keras.utils.register_keras_serializable("spatial_flow/reduction")
+spatial_register = keras.utils.register_keras_serializable("genome_flow/reduction")
 
 @spatial_register
 class Reducer(keras.layers.Layer):
     """ 
     
-    The base class for reducers, Reducer possesses the important
-    method designed to be overridden called "reduce"
+    The base class for reducers.
 
+    reducer should be initialized with either another reducer or a
+    selector, after which it will be forever tied to it. It's function
+    is to take a selection and remove dimensions from the channels argument
+    with the ultimate goal, naturally, of removing all the dimensions so that
+    the combiners can get to work
 
-
-    reducer should be initialized with a single
-    selector, after which it will forever be tied to it.
-
+    reducer comes prepackaged with several overriddable functions for various functionalities
+    and implimentations. This includes keras based reduction, custom function reduction, and
+    other reduction methods.
 
     """
     @property
@@ -38,19 +41,21 @@ class Reducer(keras.layers.Layer):
     @property
     def selector(self):
         return self._selector
-    def __init__(self, selector, reduce_dims = "all", name="reducer"):
+    def __init__(self, selector_reducer,
+                 reduce_mode,
+                 name="reducer", **kwargs):
         """
 
         The initializer for the reducer class.
 
-        :param selector: A valid selector
-        :param reduce_dims: The dimensions to be reduced. Supports "All" or a 1D bool list
+        :param selector_reducer: A valid selector or reducer object
+        :param reduction_channels: The channel dimensions to be reduced. Should be a bool list the length of the
         :param name: The name of the layer.
         """
 
         #verify inputs are sane
-        if not isinstance(selector, Selector):
-            return Reducer_Error("Input 'selector' was not a selector")
+        if not isinstance(selector, (Selector, Reducer)):
+            return Reducer_Error("Input 'selector_reducer' was neither a selector or reducer")
 
 
         #Initialize and store
@@ -77,6 +82,7 @@ class Reducer(keras.layers.Layer):
             self.__call__ = self.__stored_call
             self.__call__(input)
         self.__call__ = stripper
+    def reduce(self, input):
 
 @spatial_register
 class dense_reducer(Reducer):

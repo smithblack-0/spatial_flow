@@ -1,9 +1,9 @@
 import tensorflow as tf
 import tensorflow.keras as keras
 
-from spatial_flow.reference import Reference
-from spatial_flow.utils.error_utils import Selection_Error
-import spatial_flow.core as core
+from genome_flow.reference_old import Reference
+from genome_flow.utils.error_utils import Selection_Error
+import genome_flow.core as core
 
 """
 
@@ -25,7 +25,7 @@ are they standard; indeed, they represent something completely different from a 
 
 """
 
-spatial_register = keras.utils.register_keras_serializable("spatial_flow/selectors")
+spatial_register = keras.utils.register_keras_serializable("genome_flow/selectors")
 
 
 @spatial_register
