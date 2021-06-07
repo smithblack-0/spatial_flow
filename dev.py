@@ -2,14 +2,10 @@ import tensorflow as tf
 import tensorflow.keras as keras
 # import numpy as np
 
-test1 = tf.keras.layers.Dense(2)
-test2 = tf.keras.layers.Dense(2)
-test = test2(test1(tf.constant([[1,2,3]])))
+test = tf.Variable(1)
 
-print(dir(test2))
-print(test2.weights)
-print(test2.variables)
-print(test2.get_config())
+print(dir(test))
+print()
 #input = tf.keras.Input(type_spec=tf.TensorSpec([5]))
 #output = selector(input)
 #model = tf.keras.Model(input, output)

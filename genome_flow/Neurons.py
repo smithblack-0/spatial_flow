@@ -19,6 +19,8 @@ class Neural_Space:
 
         self._name = name
         self._dimensions = dimensions
+        self._neurons = neurons
+    def from_config(self, config):
 
 
     #construction methods

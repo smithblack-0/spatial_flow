@@ -11,7 +11,7 @@ class Neuron_Error(Exception):
         msg = "Neuron Error: " + msg
         super().__init__(msg)
 
-class Mutator_Error(Exception):
+class MutatorError(Exception):
     """
 
     Mutator error class
